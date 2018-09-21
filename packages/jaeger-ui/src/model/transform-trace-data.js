@@ -40,7 +40,8 @@ export default function transfromTraceData(data: TraceData & { spans: SpanWithPr
   // filter out spans with empty start times
   // eslint-disable-next-line no-param-reassign
   data.spans = data.spans.filter(span => Boolean(span.startTime));
-
+  const tagCounts: { [string]: number } = {};
+  const List_Tag_SpanKind_Forbiden = ['server', 'consumer'];
   const max = data.spans.length;
   for (let i = 0; i < max; i++) {
     const span = data.spans[i];
@@ -71,6 +72,25 @@ export default function transfromTraceData(data: TraceData & { spans: SpanWithPr
     }
     span.process = data.processes[processID];
     spanMap.set(spanID, span);
+
+    // TEST
+    if (span.tags !== 'undefined' && span.tags.length > 0) {
+      let tmpComponentAllow = true;
+      let tmpComponentValue = "";
+      for (var j = 0; j < span.tags.length; j++) {
+        const tag = span.tags[j];
+        //document.write(tag.key + "\n");
+         if(tag.key === "component"){
+           tmpComponentValue = tag.value;
+         }
+         if(tag.key === "span.kind" && List_Tag_SpanKind_Forbiden.includes(tag.value) === true){
+          tmpComponentAllow = false;
+        }
+      }
+      if(tmpComponentValue !== "" && tmpComponentAllow){
+        tagCounts[tmpComponentValue] = (tagCounts[tmpComponentValue] || 0) + 1;
+      }
+    }
   }
   // tree is necessary to sort the spans, so children follow parents, and
   // siblings are sorted by start time
@@ -84,38 +104,40 @@ export default function transfromTraceData(data: TraceData & { spans: SpanWithPr
       return;
     }
     const span: ?Span = (spanMap.get(spanID): any);
-    if (!span) {
-      return;
-    }
-    const { serviceName } = span.process;
-    svcCounts[serviceName] = (svcCounts[serviceName] || 0) + 1;
-    if (!span.references || !span.references.length) {
-      traceName = `${serviceName}: ${span.operationName}`;
-    }
-    span.relativeStartTime = span.startTime - traceStartTime;
-    span.depth = depth - 1;
-    span.hasChildren = node.children.length > 0;
-    span.references.forEach(ref => {
-      const refSpan: ?Span = (spanMap.get(ref.spanID): any);
-      if (refSpan) {
-        // eslint-disable-next-line no-param-reassign
-        ref.span = refSpan;
-      }
-    });
-    spans.push(span);
+  if (!span) {
+    return;
+  }
+  const { serviceName } = span.process;
+  svcCounts[serviceName] = (svcCounts[serviceName] || 0) + 1;
+  if (!span.references || !span.references.length) {
+    traceName = `${serviceName}: ${span.operationName}`;
+  }
+  span.relativeStartTime = span.startTime - traceStartTime;
+  span.depth = depth - 1;
+  span.hasChildren = node.children.length > 0;
+  span.references.forEach(ref => {
+    const refSpan: ?Span = (spanMap.get(ref.spanID): any);
+  if (refSpan) {
+    // eslint-disable-next-line no-param-reassign
+    ref.span = refSpan;
+  }
+});
+spans.push(span);
   });
-  const services = Object.keys(svcCounts).map(name => ({ name, numberOfSpans: svcCounts[name] }));
-  return {
-    services,
-    spans,
-    traceID,
-    traceName,
-    // can't use spread operator for intersection types
-    // repl: https://goo.gl/4Z23MJ
-    // issue: https://github.com/facebook/flow/issues/1511
-    processes: data.processes,
-    duration: traceEndTime - traceStartTime,
-    startTime: traceStartTime,
-    endTime: traceEndTime,
-  };
+const services = Object.keys(svcCounts).map(name => ({ name, numberOfSpans: svcCounts[name] }));
+const components = Object.keys(tagCounts).map(name => ({ name, numberOfSpans: tagCounts[name] }));
+return {
+  components,
+  services,
+  spans,
+  traceID,
+  traceName,
+  // can't use spread operator for intersection types
+  // repl: https://goo.gl/4Z23MJ
+  // issue: https://github.com/facebook/flow/issues/1511
+  processes: data.processes,
+  duration: traceEndTime - traceStartTime,
+  startTime: traceStartTime,
+  endTime: traceEndTime,
+};
 }

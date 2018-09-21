@@ -31,6 +31,7 @@ export type TraceSummary = {
   numberOfErredSpans: number,
   numberOfSpans: number,
   services: { name: string, numberOfSpans: number }[],
+  components: { name: string, numberOfSpans: number }[],
 };
 
 export type TraceSummaries = {

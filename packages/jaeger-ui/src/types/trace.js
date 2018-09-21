@@ -77,4 +77,5 @@ export type Trace = TraceData & {
   startTime: number,
   traceName: string,
   services: { name: string, numberOfSpans: number }[],
+  components: { name: string, numberOfSpans: number }[],
 };

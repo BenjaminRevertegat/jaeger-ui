@@ -45,7 +45,7 @@ export default class ResultItem extends React.PureComponent<Props> {
 
   render() {
     const { durationPercent, isInDiffCohort, linkTo, toggleComparison, trace } = this.props;
-    const { duration, services, startTime, spans, traceName, traceID } = trace;
+    const { duration, services, components, startTime, spans, traceName, traceID } = trace;
     const mDate = moment(startTime / 1000);
     const timeStr = mDate.format('h:mm:ss a');
     const fromNow = mDate.fromNow();
@@ -97,6 +97,21 @@ export default class ResultItem extends React.PureComponent<Props> {
               {timeStr.slice(0, -3)}&nbsp;{timeStr.slice(-2)}
               <br />
               <small>{fromNow}</small>
+            </Col>
+          </Row>
+          <Divider type="horizontal" />
+          <Row>
+          <Col span={16} offset={4} className="ub-p2">
+              <ul className="ub-list-reset" >
+                {sortBy(components, c => c.name).map(component => {
+                  const { name, numberOfSpans: count } = component;
+                  return (
+                      <Tag>
+                        {name} ({count})
+                      </Tag>
+                  );
+                })}
+              </ul>
             </Col>
           </Row>
         </Link>
